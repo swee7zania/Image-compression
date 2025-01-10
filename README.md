@@ -1,6 +1,6 @@
 # **Image Transmission for Intelligent Mobile Devices**
 
-With the widespread use of mobile devices, the cost of image storage and transmission has increased significantly. To reduce bandwidth requirements while maintaining perceived image quality, I propose an image compression algorithm based on human visual perception characteristics. Drawing inspiration from the paper *Five Modulus Method for Image Compression (https://arxiv.org/abs/1211.4591?utm_source=chatgpt.com)*, this method rounds data values and multiplies them by their rounded values, grouping adjacent values within a specified range. This makes the data more suitable for Run-Length Encoding (RLE).
+With the widespread use of mobile devices, the cost of image storage and transmission has increased significantly. To reduce bandwidth requirements while maintaining perceived image quality, I propose an image compression algorithm based on human visual perception characteristics. Drawing inspiration from the paper *Five Modulus Method for Image Compression (https://arxiv.org/abs/1211.4591)*, this method rounds data values and multiplies them by their rounded values, grouping adjacent values within a specified range. This makes the data more suitable for Run-Length Encoding (RLE).
 
 ### 1. Core Concept
 
