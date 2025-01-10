@@ -2,7 +2,7 @@ from PIL import Image
 import numpy as np
 
 
-# RGB 到 YCbCr 转换函数
+# RGB to YCbCr conversion function
 def rgb_to_ycbcr_pillow(img):
     pil_img = Image.fromarray(img, mode='RGB')
     ycbcr_img = pil_img.convert('YCbCr')
@@ -14,7 +14,7 @@ def rgb_to_ycbcr_pillow(img):
     return Y, Cb, Cr
 
 
-# YCbCr 到 RGB 转换函数，使用 PIL 内建转换
+# YCbCr to RGB conversion function
 def ycbcr_to_rgb_pillow(Y, Cb, Cr):
     ycbcr_array = np.stack([Y, Cb, Cr], axis=-1)
     ycbcr_img = Image.fromarray(ycbcr_array, mode='YCbCr')
@@ -22,20 +22,19 @@ def ycbcr_to_rgb_pillow(Y, Cb, Cr):
     return np.array(rgb_img)
 
 
-# 测试函数
 if __name__ == '__main__':
     img = np.array(Image.open('../../dataset/rgb8bit/nightshot_iso_1600.ppm'))
 
-    # RGB 到 YCbCr
+    # RGB to YCbCr
     Y, Cb, Cr = rgb_to_ycbcr_pillow(img)
 
     Image.fromarray(Y).save('../data/ycbcr/Y_channel.png')
     Image.fromarray(Cb).save('../data/ycbcr/Cb_channel.png')
     Image.fromarray(Cr).save('../data/ycbcr/Cr_channel.png')
-    print("YCbCr 转换完成（Pillow）")
+    print("YCbCr conversion is complete.")
 
-    # YCbCr 到 RGB 使用 PIL 内建转换
+    # YCbCr to RGB
     rgb_reconstructed = ycbcr_to_rgb_pillow(Y, Cb, Cr)
 
-    Image.fromarray(rgb_reconstructed).save('../data/ycbcr/reconstructed_rgb_pillow.png')
-    print("RGB 重建完成（Pillow）")
+    Image.fromarray(rgb_reconstructed).save('../data/ycbcr/recover_rgb_pillow.png')
+    print("RGB recovery complete.")

@@ -1,318 +1,270 @@
 # **智能移动设备图像传输**
 
-随着移动设备的普及，图像的存储和传输成本显著增加。为了降低带宽需求，同时保持用户感知质量，我们提出一种针对人眼感知特点的图像压缩算法，该算法结合了 FMM 和视觉感知模型。
+随着移动设备的普及，图像的存储和传输成本显著增加。为了降低带宽需求，同时保持用户感知质量，我提出一种结合人眼感知特点的图像压缩算法。并在论文 *Five Modulus Method For Image Compression (https://arxiv.org/abs/1211.4591?utm_source=chatgpt.com)* 中汲取灵感，将数据取整后再乘以该取整值，使相邻的数值在规定区间内归为相同的值，从而更适应游程编码 (REL)。
 
 ### 1. 核心思想
 
-- **人眼感知模型**：人眼对亮度变化的敏感性高于色度变化，对高频细节（如边缘）更敏感。
-- **FMM 应用**：利用 FMM 方法对亮度通道进行更精细的量化和压缩，同时对色度通道采用更大的模数以进一步压缩数据。
-- **熵编码**：使用变长熵编码对量化后的残差数据进行压缩，提升压缩效率。
+- **人眼感知模型**：人眼对图像的不同区域敏感性不同
+  - 对亮度（`Y` 通道）变化极为敏感，特别是边缘与高频细节。
+  - 对色度（`Cb` 和 `Cr` 通道）变化的敏感性较低，尤其是低频区域。
+- **FMM 应用**：结合人眼感知特性
+  - 在亮度通道上使用较小的模数，保留更多细节。
+  - 在色度通道上使用较大的模数，显著减少数据量。
+- **熵编码**：利用游程编码 (REL)
+  - 进一步提升压缩效率，减少冗余信息存储。
 
-------
+### 2. 详细设计内容
 
-#### 2. 详细设计内容
-
-##### 2.1 编码流程
+#### 2.1 编码 Pipeline
 
 1. **读取与预处理**
-   - 读取 .ppm 图像数据，解析为 RGB 通道。
-   - 转换为 YCbCr 颜色空间。
+   - 读取 `.ppm` 图像数据，亮度通道 `Y`、色度通道 `Cb` 和 `Cr`。
+   - 转换为 `YCbCr` 颜色空间，分离亮度与色度通道。
 2. **FMM 量化**
-   - 亮度通道 YY：模数为 3，保留更多视觉重要信息。
-   - 色度通道 CbCb 和 CrCr：模数为 7，适当减少数据量。
-3. **预测编码**
-   - 采用简单的一阶线性预测（如 P[i]=Y[i−1]P[i] = Y[i-1]），计算残差。
-   - 对每个通道单独进行预测编码。
+   - 亮度通道 `Y`：暂时取模数为4，保留更多视觉重要信息。
+   - 色度通道 `Cb` 和 `Cr`：暂时取模数为 7，进一步减少存储和传输数据量。
+   - 可以根据图像内容复杂度，动态调整 FMM 量化参数。
 4. **熵编码**
-   - 将 FMM 处理后的残差通过熵编码进一步压缩。
-   - 熵编码： **ANS（非对称数值系统）**。
+   - 将 FMM 量化后的值通过熵编码进一步压缩。
+   - 使用 **RLE（游程编码）**，对连续重复的数据段进行有效压缩。
 5. **压缩文件打包**
-   - 将 Y、Cb、Cr 三个通道的压缩数据写入输出文件，并保存相关元数据（如图像尺寸、模数）。
+   - 将 RLE 编码后的数据存为二进制文件，保存相关数据。
 
-##### 2.2 解码流程
+#### 2.2 解码 Pipeline
 
 1. **读取与解码**
-   - 读取压缩文件，提取元数据。
-   - 对 Y、Cb、Cr 三个通道分别进行熵解码，得到残差。
-2. **反预测**
-   - 根据预测公式，恢复每个像素的原始值。
-3. **反模运算**
-   - 使用模数恢复量化前的像素值。
+   - 从压缩文件中提取熵编码数据。
+   - 分别对 `Y`、`Cb`、`Cr` 三个通道进行 RLE 解码，恢复量化后的数据。
 4. **颜色空间逆转换**
-   - 将 YCbCr 转回 RGB。
+   - 将还原的 `YCbCr` 数据转换回 RGB 颜色空间。
 5. **输出图像**
-   - 将解压后的图像保存为 .ppm 格式。
+   - 生成解压后的图像，存储为常见格式。
 
 ------
 
-#### 3. 创新点
+# 功能模块
 
-1. **FMM 的差异化模运算**
-    利用模数大小控制不同通道的压缩比，保留人眼更敏感的亮度信息，压缩次要的色度信息。
-2. **简单高效的预测编码**
-    通过线性预测减少熵，提升压缩效率。
-3. **灵活的熵编码**
-    支持多种熵编码方法，根据需求选择不同的编码策略。
+## 图像读取工具
 
-------
+- 函数：`read_ppm`
 
-#### 4. 可用的熵编码方法
+  - 用于读取 PPM 文件并返回重构的图像数组。
 
-1. **Huffman 编码**
-   - 简单高效，适合小数据量的压缩。
-   - Python 内置支持 `heapq` 和 `collections.Counter` 生成霍夫曼树。
-2. **算术编码**
-   - 压缩效率高，接近理论极限。
-   - 复杂度较高，但现有封装库可用。
-3. **ANS（非对称数值系统）**
-   - 性能与算术编码相近，计算更高效。
-   - 可使用 `pyans`（开源库）。
-4. **Range 编码**
-   - 算术编码的变种，广泛应用于现代视频压缩。
-5. **Rice 编码**
-   - 特别适合低熵数据。
+- 参数：
 
-------
+  - `file_path`：字符串类型，PPM 文件的路径。
 
-#### 5. 推荐的封装库
+- 返回值：
 
-以下是一些可以直接调用的 Python 熵编码库：
+  - `img`：三维 NumPy 数组，表示读取的 RGB 图像，形状为 `(height, width, 3)`。
 
-1. **Huffman 编码**
+- 读取结果：
 
-   - [huffman](https://pypi.org/project/huffman/)：简单易用的 Python 封装。
+  我读取了数据集里其中一个 .ppm 数据，并打印了它的存储内容，打印结果如下：
 
-   ```python
-   from huffman import HuffmanCoding
-   
-   h = HuffmanCoding()
-   encoded_data = h.compress("data.txt")
-   decoded_data = h.decompress("compressed_data.txt")
-   ```
+  | .ppm 数据                                                    | 第一个像素 RGB = (5,13,26)                                   |
+  | ------------------------------------------------------------ | ------------------------------------------------------------ |
+  | <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250108180928715.png" alt="image-20250108180918838"/> | <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250108180918838.png" alt="image-20250108180918838" style="zoom:60%;" /> |
 
-2. **算术编码**
+  根据这里我们可以判断，原始图像 .ppm 是用 BIP方式存储的。BIP 存储方式为每个像素的所有 RGB 依次存储。例如 `Pixel1 的 [R, G, B] → Pixel2 的 [R, G, B] → Pixel3 的 [R, G, B]`。
 
-   - [ari-codec](https://github.com/rygorous/ari-codec)：高效算术编码库。
+---
 
-3. **ANS 编码**
+## `YCbCr` 与 RGB 转换
 
-   - [pyans](https://github.com/rygorous/pyans)：支持多种 ANS 编码实现。
+### 1. **RGB to `YCbCr` 转换**
 
-4. **Range 编码**
+- **函数**： `rgb_to_ycbcr_pillow` 
 
-   - [range-coder](https://github.com/jljusten/range-coder)：高效的 Range 编码库。
+  将 RGB 图像转换为 `YCbCr` 颜色空间。
 
-------
+- **参数**：
+  - `img`：`numpy.ndarray` 类型，输入的 RGB 图像。
 
-#### 6. 编码和解码的具体实现
+- **返回值**：
 
-##### 6.1 编码伪代码
+  - `Y`：亮度通道（`numpy.ndarray`）。
 
-```python
-# 文件名：fmm_image_encoder.py
-import numpy as np
-from huffman import HuffmanCoding
-from PIL import Image
+  - `Cb`：蓝色色度通道（`numpy.ndarray`）。
 
-def rgb_to_ycbcr(img):
-    # 转换为 YCbCr
-    pass
+  - `Cr`：红色色度通道（`numpy.ndarray`）。
 
-def fmm_quantization(channel, modulus):
-    return channel % modulus
+- **实现步骤**：
+  - 使用 Pillow 将 RGB 图像转换为 `YCbCr` 图像。
+  - 将 `YCbCr` 图像转换为 NumPy 数组。
+  - 分离 `Y`、`Cb`、`Cr` 三个通道并返回。
 
-def encode_image(image_path, output_path):
-    img = Image.open(image_path).convert('RGB')
-    y, cb, cr = rgb_to_ycbcr(np.array(img))
-    
-    # FMM 量化
-    y_quant = fmm_quantization(y, 3)
-    cb_quant = fmm_quantization(cb, 7)
-    cr_quant = fmm_quantization(cr, 7)
-    
-    # 霍夫曼编码
-    h = HuffmanCoding()
-    encoded_y = h.compress(y_quant)
-    encoded_cb = h.compress(cb_quant)
-    encoded_cr = h.compress(cr_quant)
-    
-    # 保存压缩数据
-    with open(output_path, 'wb') as f:
-        f.write(encoded_y + encoded_cb + encoded_cr)
-```
+### 2. **`YCbCr` to RGB 转换**
 
-##### 6.2 解码伪代码
+- **函数** `ycbcr_to_rgb_pillow` 
 
-```python
-# 文件名：fmm_image_decoder.py
-from huffman import HuffmanCoding
+  - 将 `YCbCr` 图像还原为 RGB 图像。
 
-def ycbcr_to_rgb(y, cb, cr):
-    # 转换为 RGB
-    pass
+- **参数**：
 
-def decode_image(input_path, output_path):
-    with open(input_path, 'rb') as f:
-        compressed_data = f.read()
-    
-    h = HuffmanCoding()
-    y_decoded = h.decompress(compressed_data[:1000])  # 假设分段长度
-    cb_decoded = h.decompress(compressed_data[1000:2000])
-    cr_decoded = h.decompress(compressed_data[2000:])
-    
-    # 反模运算
-    y = y_decoded
-    cb = cb_decoded
-    cr = cr_decoded
-    
-    # 转回 RGB
-    img = ycbcr_to_rgb(y, cb, cr)
-    img.save(output_path)
-```
+  - `Y`：亮度通道（`numpy.ndarray`）。
+
+  - `Cb`：蓝色色度通道（`numpy.ndarray`）。
+
+  - `Cr`：红色色度通道（`numpy.ndarray`）。
+
+- **返回值**：
+  - `rgb_img`：`numpy.ndarray` 类型，重建后的 RGB 图像。
+
+- **实现步骤**：
+  - 将 `Y`、`Cb`、`Cr` 三个通道堆叠为一个三维数组。
+  - 使用 Pillow 将堆叠数组转化为 `YCbCr` 图像。
+  - 将 `YCbCr` 图像转换回 RGB 图像并返回。
+
+### 3. 测试用例
+
+这只是一个工具，但我在 main 函数中写了一个测试用例。
+
+- **RGB to `YCbCr`**
+  - 读取原始图像 `../../dataset/rgb8bit/nightshot_iso_1600.ppm`。
+  - 调用 `rgb_to_ycbcr_pillow` 将图像分离为 `Y`、`Cb`、`Cr` 通道。
+  - 分别将 `Y` 通道、`Cb` 通道、`Cr` 通道保存在 `../data/ycbcr` 目录中。
+
+- **`YCbCr` to RGB**
+  - 调用 `ycbcr_to_rgb_pillow`，参数为 `Y`、`Cb`、`Cr` 通道数据。
+  - 还原为 RGB 图像，并保存至 `../data/ycbcr/recover_rgb_pillow.png`。
+
+---
+
+## FMM 量化工具
+
+### 1. 模块概述
+
+- **函数** `fmm_quantization`
+  - 对给定通道数据进行有限模数量化。
+- **参数**：
+  - `channel`：`numpy.ndarray` 类型，表示图像的一个通道。
+  - `modulus`：整数，FMM 量化的模数。
+- **返回值**：
+  - 量化后的通道数据，`numpy.ndarray` 类型。
+- **实现步骤**：
+  1. 通过四舍五入调整后再乘以模数，得到量化结果。
+  2. 返回量化后的通道数据。
+
+### 2. **测试**用例
+
+这只是一个工具，但我在 main 函数中写了一个测试用例。
+
+-  使用 `read_ppm` 从指定路径读取 PPM 图像。
+- 使用 `rgb_to_ycbcr_pillow` 将 RGB 图像转换为 `Y`、`Cb`、`Cr` 三个通道。
+- 对每个通道进行 FMM 量化，可自由设置模数达到想要的效果。
+- 将量化后的 `Y`、`Cb`、`Cr` 通道分别保存为 PNG 图像。
+-  使用 `ycbcr_to_rgb_pillow` 将量化后的 `YCbCr` 数据还原为 RGB 图像，并保存。
 
 ------
 
-#### 7. 测试与验证
+# 压缩与解压
 
-1. **测试数据**：使用多种 .ppm 图像测试压缩率和解压缩速度。
-2. **对比实验**：与标准 JPEG 压缩进行性能对比。
-3. **主观评价**：通过用户测试评估视觉质量。
+## 压缩功能实现
 
-如果需要更详细的算法解释或代码实现，可以继续完善细节！
+### 1. 游程编码 (REL)
 
-以下是使用 **Pillow (PIL)** 将 RGB 图像转换为 YCbCr 颜色空间的代码详细讲解：
+- **函数**：`rle_compress`
+  - 对输入的二维图像通道数据进行 **RLE（游程编码）** 压缩。
 
-------
+- **参数**：
+  - `channel`：`numpy.ndarray` 类型，输入的图像通道数据（二维数组）。
 
-# 转换为 YCbCr 颜色空间
+- **返回值**：
+  - `compressed`：列表，每个元素格式为 `(value, count)`，表示某像素值及其连续出现的次数。
 
-#### 1. 导入必要库
+- **实现步骤**：
+  - 将二维图像通道展平为一维数组。
+  - 遍历像素值，记录连续重复的像素值及其计数。
+  - 将压缩结果存入列表并返回。
 
-```python
-from PIL import Image
-import numpy as np
-```
+### 2. 压缩文件保存
 
-- **Pillow (PIL)**：处理图像的强大库，支持多种图像格式和颜色空间转换。
-- **NumPy**：将图像数据转换为数组，便于矩阵运算和操作。
+- **函数**：`save_compressed_data_npz`
+  - 将压缩后的通道数据及图像形状保存为二进制 `.npz` 文件。
 
-#### 2. 函数定义：`rgb_to_ycbcr_pillow`
+- **参数**：
 
-```python
-def rgb_to_ycbcr_pillow(img):
-```
+  - `Y_compressed`：亮度通道 `Y` 的 RLE 压缩数据。
 
-- 该函数接收一个 **RGB 图像**（形状为 `(height, width, 3)` 的 NumPy 数组），并返回三个独立的通道：**Y**（亮度）、**Cb** 和 **Cr**（色度）。
+  - `Cb_compressed`：色度通道 `Cb` 的 RLE 压缩数据。
 
-------
+  - `Cr_compressed`：色度通道 `Cr` 的 RLE 压缩数据。
 
-#### 3. 转换 RGB 图像到 PIL 格式
+  - `Y_shape`：原始图像 Y 通道的形状（元组）。
 
-```python
-pil_img = Image.fromarray(img, mode='RGB')
-```
+  - `filename`：字符串，保存的文件名。
 
-- 使用 `Image.fromarray` 将 NumPy 数组转换为 Pillow 支持的 **PIL 图像对象**。
-- 参数 `mode='RGB'` 表明输入图像是 RGB 格式。
+- **实现步骤**：
 
-------
+  - 使用 `numpy.savez_compressed` 保存 `Y`、`Cb`、`Cr` 通道的压缩数据和图像形状。
 
-#### 4. 将 RGB 转换为 YCbCr
+  - 生成二进制 `.npz` 文件，用于后续解压和还原。
 
-```python
-ycbcr_img = pil_img.convert('YCbCr')
-```
+### 3. 代码执行
 
-- 调用 
+更改 main 函数中的图像路径，即可调用模块实现图像压缩，生成压缩后的二进制文件。
 
-  ```
-  convert('YCbCr')
-  ```
-
-   将 PIL 图像从 
-
-  RGB 颜色空间
-
-   转换为 
-
-  YCbCr 颜色空间
-
-  。
-
-  - **Y**：亮度（Luminance），人眼对其最敏感。
-  - **Cb**：蓝色色度差（Blue-difference Chroma）。
-  - **Cr**：红色色度差（Red-difference Chroma）。
+1. 使用 `read_ppm` 从路径 `../dataset/rgb8bit/nightshot_iso_1600.ppm` 读取 RGB 图像。
+2. 使用 `rgb_to_ycbcr_pillow` 将图像分解为 `Y`、`Cb`、`Cr` 三个通道。
+3. 对每个通道进行 FMM 量化：这里我取 `Y` 通道模数为 4，`Cb` 和 `Cr` 通道模数为 7。
+4. 对量化后的 `Y`、`Cb`、`Cr` 通道数据进行 RLE 压缩。
+5. 调用 `save_compressed_data_npz`将压缩数据和图像形状信息保存为二进制文件 `data/compressed_data.npz`。
 
 ------
 
-#### 5. 转换为 NumPy 数组
+## 解压功能实现
 
-```python
-ycbcr_array = np.array(ycbcr_img)
-```
+### 1. 编码解压
 
-- 使用 `np.array` 将转换后的 **YCbCr 图像**转为 NumPy 数组，以便进一步操作。
-- 转换后，数组的形状仍为 `(height, width, 3)`，分别表示 **Y**、**Cb** 和 **Cr** 通道。
+- **函数**：`rle_decompress`
 
-------
+  - 对 RLE 压缩数据进行解压缩，将其还原为二维图像数据。
 
-#### 6. 分离 YCbCr 通道
+- **参数**：
 
-```python
-Y = ycbcr_array[..., 0]
-Cb = ycbcr_array[..., 1]
-Cr = ycbcr_array[..., 2]
-```
+  - `compressed_data`：列表，包含 RLE 压缩的 `(value, count)` 元组。
 
-- 通过数组的切片操作，将 
+  - `shape`：解压后图像的形状（如 `(height, width)`）。
 
-  YCbCr
+- **返回值**：
+  - `decompressed`：`numpy.ndarray` 类型，解压后的二维图像数据。
 
-   三个通道分离：
+- **实现步骤**：
 
-  - `[..., 0]` 表示第一个通道（Y）。
-  - `[..., 1]` 表示第二个通道（Cb）。
-  - `[..., 2]` 表示第三个通道（Cr）。
+  - 初始化一个全零数组，形状为 `shape`。
 
-------
+  - 遍历 `compressed_data`，将每个值根据其计数填入解压数组的相应位置。
 
-#### 7. 返回 Y、Cb、Cr 通道
+  - 返回解压后的图像数据。
 
-```python
-return Y, Cb, Cr
-```
+### 2. 恢复图像
 
-- 返回亮度（Y）、蓝色色度差（Cb）和红色色度差（Cr）通道数据，便于后续的处理和保存。
+- **函数**：`restore_image_from_npz`
+  - 从 `.npz` 文件中恢复压缩前的 RGB 图像并保存。
 
-------
+- **参数**：
+  - `npz_filename`：字符串，输入的 `.npz` 文件路径。
 
-#### 8. 测试代码
+- **实现步骤**：
+  - 加载压缩数据：从 `.npz` 文件中读取压缩的 `Y`、`Cb`、`Cr` 数据及图像形状信息。
+  - 解压缩：对 `Y`、`Cb`、`Cr` 通道数据分别调用 `rle_decompress` 进行解压缩。
+  - `YCbCr` 转 RGB：使用 `ycbcr_to_rgb_pillow` 将解压后的 `YCbCr` 数据转换为 RGB 图像。
+  - 保存恢复图像：将恢复的 RGB 图像保存为常见的 PNG 图像格式。
 
-```python
-if __name__ == '__main__':
-    img = np.array(Image.open('example.ppm'))
-    Y, Cb, Cr = rgb_to_ycbcr_pillow(img)
-    
-    Image.fromarray(Y).save('Y_channel.png')
-    Image.fromarray(Cb).save('Cb_channel.png')
-    Image.fromarray(Cr).save('Cr_channel.png')
-    print("YCbCr 转换完成（Pillow）")
-```
+## **代码执行**
 
-- **读取图像**：`Image.open` 加载 `.ppm` 文件，并将其转换为 NumPy 数组。
-- **调用转换函数**：使用 `rgb_to_ycbcr_pillow` 将 RGB 转换为 YCbCr。
-- **保存通道图像**：通过 `Image.fromarray` 将 Y、Cb、Cr 通道分别保存为单独的 PNG 文件，便于查看效果。
+在 main 函数中调用的 `restore_image_from_npz` 中，更改传入的参数（压缩后的二进制文件路径），即可调用模块实现图像复原，得到复原后的图像。
 
-------
+两个图像的对比如下：
 
-### 结果
+| 原始图像                                                     | 压缩文件                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `nightshot_iso_1600.ppm` （21610 KB）                        | `compressed_data.npz`（9457 KB）                             |
+| <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250110181253164.png" alt="image-20250110181253164"/> | ![image-20250110181316824](D:\0. Data Transmittion\Image Compression\assets\image-20250110181316824.png) |
 
-运行代码后会生成以下文件：
-
-1. `Y_channel.png`：亮度通道图像。
-2. `Cb_channel.png`：蓝色色度差通道图像。
-3. `Cr_channel.png`：红色色度差通道图像。
-
-这些文件可用来检查转换效果，并用于后续的压缩处理。
-
-### 
+压缩率计算：
+$$
+\text{压缩率} = \frac{9457}{21610} \times 100\% \approx 43.75\%
+$$
+最终的压缩率约为 **43.75%**。
