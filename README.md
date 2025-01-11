@@ -74,7 +74,7 @@ With the widespread use of mobile devices, the cost of image storage and transmi
 
 ### 1. **RGB to `YCbCr` Conversion**
 
-- **Function**: `rgb_to_ycbcr_pillow`
+- **Function**: `rgb_to_ycbcr`
 
   Converts an RGB image to `YCbCr` color space.
 
@@ -96,7 +96,7 @@ With the widespread use of mobile devices, the cost of image storage and transmi
 
 ### 2. **`YCbCr` to RGB Conversion**
 
-- **Function**: `ycbcr_to_rgb_pillow`
+- **Function**: `ycbcr_to_rgb`
 
   Restores an RGB image from `YCbCr`.
 
@@ -120,10 +120,10 @@ This is just a utility, but I included a test case in the main function.
 
 - **RGB to `YCbCr`**:
   - Read the original image `../../dataset/rgb8bit/nightshot_iso_1600.ppm`.
-  - Use `rgb_to_ycbcr_pillow` to separate the image into `Y`, `Cb`, and `Cr` channels.
+  - Use `rgb_to_ycbcr` to separate the image into `Y`, `Cb`, and `Cr` channels.
   - Save the `Y`, `Cb`, and `Cr` channels individually in the `../data/ycbcr` directory.
 - **`YCbCr` to RGB**:
-  - Use `ycbcr_to_rgb_pillow` with the `Y`, `Cb`, and `Cr` channel data.
+  - Use `ycbcr_to_rgb` with the `Y`, `Cb`, and `Cr` channel data.
   - Restore the RGB image and save it to `../data/ycbcr/recover_rgb_pillow.png`.
 
 ------
@@ -148,10 +148,10 @@ This is just a utility, but I included a test case in the main function.
 This is another utility, with a test case provided in the main function.
 
 - Use `read_ppm` to read a PPM image from a specified path.
-- Use `rgb_to_ycbcr_pillow` to convert the RGB image to `Y`, `Cb`, and `Cr` channels.
+- Use `rgb_to_ycbcr` to convert the RGB image to `Y`, `Cb`, and `Cr` channels.
 - Apply FMM quantization to each channel, adjusting the modulus to achieve the desired effect.
 - Save the quantized `Y`, `Cb`, and `Cr` channels as PNG images.
-- Use `ycbcr_to_rgb_pillow` to restore the quantized `YCbCr` data to an RGB image and save it.
+- Use `ycbcr_to_rgb to restore the quantized `YCbCr` data to an RGB image and save it.
 
 ------
 
@@ -191,7 +191,7 @@ This is another utility, with a test case provided in the main function.
 To execute the compression, modify the image path in the main function to call the modules and generate a compressed binary file.
 
 1. Use `read_ppm` to read an RGB image from `../dataset/rgb8bit/nightshot_iso_1600.ppm`.
-2. Use `rgb_to_ycbcr_pillow` to separate the image into `Y`, `Cb`, and `Cr` channels.
+2. Use `rgb_to_ycbcr` to separate the image into `Y`, `Cb`, and `Cr` channels.
 3. Perform FMM quantization on each channel with modulus 4 for `Y` and modulus 7 for `Cb` and `Cr`.
 4. Compress the quantized `Y`, `Cb`, and `Cr` channels using RLE.
 5. Save the compressed data and image dimensions to `data/compressed_data.npz` using `save_compressed_data_npz`.
@@ -223,12 +223,10 @@ To execute the compression, modify the image path in the main function to call t
 - **Steps**:
   - Load compressed data: Extract compressed `Y`, `Cb`, `Cr` data and image shape from the `.npz` file.
   - Decompress: Use `rle_decompress` to restore `Y`, `Cb`, and `Cr` channels.
-  - Convert `YCbCr` to RGB: Use `ycbcr_to_rgb_pillow` to transform the decompressed data back to an RGB image.
+  - Convert `YCbCr` to RGB: Use `ycbcr_to_rgb` to transform the decompressed data back to an RGB image.
   - Save the restored image as a common PNG format.
 
-------
-
-## **Code Execution**
+### 3. Code Execution
 
 Modify the parameter in the main function to point to the path of the compressed binary file when calling `restore_image_from_npz`. This will decompress the image and restore it to its original form.
 

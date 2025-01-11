@@ -1,6 +1,6 @@
 from PIL import Image
 from read_ppm import read_ppm
-from convert_to_ycbcr import rgb_to_ycbcr_pillow, ycbcr_to_rgb_pillow
+from convert_to_ycbcr import rgb_to_ycbcr, ycbcr_to_rgb
 import numpy as np
 
 
@@ -8,9 +8,10 @@ def fmm_quantization(channel, modulus):
     return (np.round(channel / modulus) * modulus).astype(np.uint8)
 
 
+# TEST
 if __name__ == '__main__':
     img = read_ppm('../../dataset/rgb8bit/nightshot_iso_1600.ppm')
-    Y, Cb, Cr = rgb_to_ycbcr_pillow(img)
+    Y, Cb, Cr = rgb_to_ycbcr(img)
 
     # Perform FMM quantification on each channel
     Y_quant = fmm_quantization(Y, 3)  # 亮度通道
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     print("FMM quantization completed.")
 
     # YCbCr to RGB
-    rgb_reconstructed = ycbcr_to_rgb_pillow(Y_quant, Cb_quant, Cr_quant)
+    rgb_reconstructed = ycbcr_to_rgb(Y_quant, Cb_quant, Cr_quant)
 
     Image.fromarray(rgb_reconstructed).save('../data/fmm/reconstructed_rgb_fmm.png')
     print("RGB recovery complete.")

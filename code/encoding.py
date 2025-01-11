@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.read_ppm import read_ppm
 from tools.fmm_quantization import fmm_quantization
-from tools.convert_to_ycbcr import rgb_to_ycbcr_pillow
+from tools.convert_to_ycbcr import rgb_to_ycbcr
 
 
 def rle_compress(channel):
@@ -22,13 +22,9 @@ def rle_compress(channel):
     return compressed
 
 
-def save_compressed_data_npz(Y_compressed, Cb_compressed, Cr_compressed, Y_shape, filename):
-    np.savez_compressed(filename, Y=Y_compressed, Cb=Cb_compressed, Cr=Cr_compressed, shape=Y_shape)
-
-
-if __name__ == '__main__':
-    img = read_ppm('../dataset/rgb8bit/nightshot_iso_1600.ppm')
-    Y, Cb, Cr = rgb_to_ycbcr_pillow(img)
+def compress_data(img_file):
+    img = read_ppm(img_file)
+    Y, Cb, Cr = rgb_to_ycbcr(img)
 
     # Perform FMM quantification on each channel
     Y_quant = fmm_quantization(Y, 4)  # 亮度通道 Y
@@ -42,4 +38,13 @@ if __name__ == '__main__':
 
     # Save compression value and image shape info as binary
     save_compressed_data_npz(Y_compressed, Cb_compressed, Cr_compressed, Y.shape, 'data/compressed_data.npz')
-    print("Compressed data is saved in .npz format")
+    print("Compressed data is saved: data/compressed_data.npz")
+
+
+def save_compressed_data_npz(Y_compressed, Cb_compressed, Cr_compressed, Y_shape, filename):
+    np.savez_compressed(filename, Y=Y_compressed, Cb=Cb_compressed, Cr=Cr_compressed, shape=Y_shape)
+
+
+if __name__ == '__main__':
+    # Change to the image path that needs to be compressed
+    compress_data('../dataset/rgb8bit/nightshot_iso_1600.ppm')

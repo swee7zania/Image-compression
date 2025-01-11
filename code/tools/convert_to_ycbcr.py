@@ -3,7 +3,7 @@ import numpy as np
 
 
 # RGB to YCbCr conversion function
-def rgb_to_ycbcr_pillow(img):
+def rgb_to_ycbcr(img):
     pil_img = Image.fromarray(img, mode='RGB')
     ycbcr_img = pil_img.convert('YCbCr')
     ycbcr_array = np.array(ycbcr_img)
@@ -15,18 +15,19 @@ def rgb_to_ycbcr_pillow(img):
 
 
 # YCbCr to RGB conversion function
-def ycbcr_to_rgb_pillow(Y, Cb, Cr):
+def ycbcr_to_rgb(Y, Cb, Cr):
     ycbcr_array = np.stack([Y, Cb, Cr], axis=-1)
     ycbcr_img = Image.fromarray(ycbcr_array, mode='YCbCr')
     rgb_img = ycbcr_img.convert('RGB')
     return np.array(rgb_img)
 
 
+# TEST
 if __name__ == '__main__':
     img = np.array(Image.open('../../dataset/rgb8bit/nightshot_iso_1600.ppm'))
 
     # RGB to YCbCr
-    Y, Cb, Cr = rgb_to_ycbcr_pillow(img)
+    Y, Cb, Cr = rgb_to_ycbcr(img)
 
     Image.fromarray(Y).save('../data/ycbcr/Y_channel.png')
     Image.fromarray(Cb).save('../data/ycbcr/Cb_channel.png')
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     print("YCbCr conversion is complete.")
 
     # YCbCr to RGB
-    rgb_reconstructed = ycbcr_to_rgb_pillow(Y, Cb, Cr)
+    rgb_reconstructed = ycbcr_to_rgb(Y, Cb, Cr)
 
     Image.fromarray(rgb_reconstructed).save('../data/ycbcr/recover_rgb_pillow.png')
     print("RGB recovery complete.")

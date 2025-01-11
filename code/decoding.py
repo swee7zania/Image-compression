@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
-from tools.convert_to_ycbcr import ycbcr_to_rgb_pillow
+from tools.convert_to_ycbcr import ycbcr_to_rgb
 
 
 def rle_decompress(compressed_data, shape):
@@ -19,8 +19,8 @@ def rle_decompress(compressed_data, shape):
     return decompressed
 
 
-def restore_image_from_npz(npz_filename):
-    data = np.load(npz_filename)
+def restore_image(npz_file):
+    data = np.load(npz_file)
     Y_compressed = data['Y']
     Cb_compressed = data['Cb']
     Cr_compressed = data['Cr']
@@ -32,7 +32,7 @@ def restore_image_from_npz(npz_filename):
     Cr = rle_decompress(Cr_compressed, (height, width))
 
     # Convert YCbCr to RGB
-    rgb = ycbcr_to_rgb_pillow(Y, Cb, Cr)
+    rgb = ycbcr_to_rgb(Y, Cb, Cr)
 
     # Save the recovered image
     Image.fromarray(rgb).save('data/restored_image.png')
@@ -40,4 +40,5 @@ def restore_image_from_npz(npz_filename):
 
 
 if __name__ == '__main__':
-    restore_image_from_npz('data/compressed_data.npz')
+    # The path can be kept unchanged
+    restore_image('data/compressed_data.npz')
