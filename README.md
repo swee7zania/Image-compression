@@ -1,21 +1,55 @@
 # **Image Transmission for Intelligent Mobile Devices**
 
-With the widespread use of mobile devices, the cost of image storage and transmission has increased significantly. To reduce bandwidth requirements while maintaining perceived image quality, I propose an image compression algorithm based on human visual perception characteristics. Drawing inspiration from the paper *Five Modulus Method for Image Compression (https://arxiv.org/abs/1211.4591)*, this method rounds data values and multiplies them by their rounded values, grouping adjacent values within a specified range. This makes the data more suitable for Run-Length Encoding (RLE).
+With the popularity of smart mobile devices (such as smartphones, drones, and dashcams), these devices are often used to capture high-resolution images or video content. However, the storage capacity and network bandwidth of the devices are limited, especially in real-time transmission scenarios. To reduce bandwidth requirements while maintaining perceived image quality, I propose an image compression algorithm based on human visual perception characteristics. Drawing inspiration from the paper *Five Modulus Method for Image Compression (https://arxiv.org/abs/1211.4591)*, this method rounds data values and multiplies them by their rounded values, grouping adjacent values within a specified range. This makes the data more suitable for Run-Length Encoding (RLE).
 
-### 1. Core Concept
+### **1. Scenario Description**
 
-- Human Visual Perception Model: Sensitivity of human eyes varies across different image regions:
-  - Highly sensitive to luminance (`Y` channel) changes, especially edges and high-frequency details.
-  - Less sensitive to chrominance (`Cb` and `Cr` channels) changes, particularly in low-frequency regions.
-- FMM Application: Leverages human visual perception:
-  - Uses smaller moduli in the luminance channel to retain more details.
-  - Applies larger moduli in chrominance channels to significantly reduce data volume.
-- Entropy Coding: Employs Run-Length Encoding (RLE)
-  - Enhances compression efficiency by reducing redundant information.
+Assume a practical application scenario: a wildlife protection monitoring system, in which multiple drones are used to capture images of wildlife and transmit them to a central monitoring station in real time. The system has the following constraints:
 
-### 2. Detailed Design
+- **Image resolution requirements:** Since wildlife live in a wide area, using larger pictures facilitates better observation of wildlife. Therefore, in the original data set of the project, each image is at least 1920×1080.
+- **Network bandwidth limitations:** Assume that drones in some areas still transmit data through 4G networks with an average bandwidth of 5 Mbps.
+- **Transmission delay requirements:** For real-time monitoring, the transmission time of each image must not exceed 2 seconds.
+- **Storage space limitations:** Drones have limited local storage capacity, so high compression rates allow drones to save more data and keep them working longer.
+- **Quality requirements:** In order not to affect the observation of animal researchers, we should retain the important information of the image to the greatest extent possible. Therefore, the PSNR (peak signal-to-noise ratio) of the decompressed image at least 30 dB.
 
-#### 2.1 Encoding Pipeline
+Given these constraints, efficient image compression is essential to reduce data size while ensuring visual quality and meeting transmission and storage requirements. Specifically, the compression algorithm must achieve:
+
+- A compressed bit rate of **2 Mbps** or lower.
+- A compression ratio of at least **60%**, e.g., reducing the size of a 3 MB image to 1200 KB or less.
+
+### 2. Core Concept
+
+#### 2.1 Human Visual Perception
+
+Sensitivity of human eyes varies across different image regions:
+- Highly sensitive to luminance (`Y` channel) changes, especially edges and high-frequency details.
+- Less sensitive to chrominance (`Cb` and `Cr` channels) changes, particularly in low-frequency regions.
+
+#### 2.2 FMM Application
+
+The Five Modulus Method (FMM) leverages human visual perception to achieve efficient compression while maintaining perceived image quality:
+
+- Smaller moduli are applied to the luminance channel (`Y`) to preserve critical visual details.
+- Larger moduli are used for the chrominance channels (`Cb` and `Cr`), reducing data volume significantly without noticeable quality degradation.
+
+#### 2.3 Controllable Lossy Compression
+
+FMM enables flexible control over the compression ratio and visual quality. By dynamically adjusting modulus values for each channel, the compression pipeline can meet diverse application requirements. For example:
+
+- High-quality mode: Smaller moduli are used for all channels to minimize distortion.
+- Bandwidth-saving mode: Larger moduli are applied to `Cb` and `Cr`, while a moderately larger modulus is used for `Y` to achieve higher compression rates without compromising overall image clarity.
+
+#### 2.4 Run-Length Encoding (RLE)
+
+RLE is a straightforward algorithm that is computationally efficient, making it ideal for real-time applications like image transmission in drones or mobile devices. It requires minimal computational resources compared to more complex methods like Huffman or arithmetic coding.
+
+- **Cooperate with FMM**: After FMM quantization, low-frequency regions in `Cb` and `Cr` channels often contain long runs of identical values, perfectly suited for RLE. This synergy allows RLE to efficiently compress repetitive data, significantly reducing file size.
+- **Simplified Decoding Process**: Unlike complex lossy compression algorithms such as JPEG or HEVC, the combined FMM+RLE approach requires lower computational resources for decoding. This makes it ideal for embedded systems or real-time transmission scenarios.
+- **Low Computational Complexity**: Compared to more complex methods like Huffman or arithmetic coding, RLE is lightweight and fast, making it suitable for real-time applications on resource-constrained devices.
+
+### 3. Detailed Design
+
+#### 3.1 Encoding Pipeline
 
 1. Reading and Preprocessing:
    - Read `.ppm` image data, including luminance channel `Y` and chrominance channels `Cb` and `Cr`.
@@ -30,7 +64,7 @@ With the widespread use of mobile devices, the cost of image storage and transmi
 4. Packaging Compressed File:
    - Save RLE-encoded data as a binary file, storing relevant data.
 
-#### 2.2 Decoding Pipeline
+#### 3.2 Decoding Pipeline
 
 1. Reading and Decoding:
    - Extract entropy-coded data from the compressed file.
@@ -40,11 +74,34 @@ With the widespread use of mobile devices, the cost of image storage and transmi
 3. Output Image:
    - Generate the decompressed image and save it in a common format.
 
+### 4. Compression Results
+
+#### 4.1 Before and After
+
+The comparison between the original and compressed images is as follows:
+
+| Original Image                                               | Decompress Image                                             | Compression Ratio | Calculation PSNR |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------- | ---------------- |
+| `nightshot_iso_1600.raw` (21609KB)                           | `compressed_data.npz` (8651 KB)                              | ≈ 60%             | ≈ 30.02 dB       |
+| <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250110181253164.png" alt="image-20250110181253164"/> | ![image-20250110181316824](D:\0. Data Transmittion\Image Compression\assets\image-20250110181316824.png) |                   |                  |
+| `flower_foveon.raw` (10047KB)                                | `compressed_data.npz` (1481 KB)                              | ≈ 85%             | ≈ 31.16 dB       |
+| `cathedral.raw`（17625KB)                                    | `compressed_data.npz` (5978 KB)                              | ≈ 66%             | ≈ 30.81 dB       |
+| `leaves_iso_200.raw`（17625KB)                               | `compressed_data.npz` (6647 KB)                              | ≈ 62%             | ≈ 29.37 dB       |
+
+#### 4.2 Performance Evaluation
+
+The experimental results show that the compression rate between **60% - 85%** can effectively reduce the amount of data stored and transmitted for images. For most images, the compression rate exceeds 60%, achieving the expected goal.
+
+- **Stability of PSNR**: The PSNR values of different images range from 29.37 dB to 31.16 dB, indicating that the compressed images can well preserve the original information in terms of visual quality. Among them, `flower_foveon.raw` has the highest PSNR (31.16 dB), while `leaves_iso_200.raw` has a slightly lower PSNR (29.37 dB). Nevertheless, these values are close to or exceed 30 dB, meeting the quality requirements of practical applications.
+- **Trade-off between compression rate and image quality**: From the experimental data, a higher compression rate (such as 85% of `flower_foveon.raw`) can still maintain a high PSNR, indicating that the adopted FMM+RLE method has achieved a good balance between compression efficiency and image quality.
+
 ------
 
 # Functional Modules
 
 ## Image Reading Tool
+
+### 1. Read `.ppm`
 
 - **Function**: `read_ppm`
 
@@ -57,6 +114,12 @@ With the widespread use of mobile devices, the cost of image storage and transmi
 - **Returns**:
 
   - `img`: 3D NumPy array representing the RGB image, with shape `(height, width, 3)`.
+  - `magic_number`: Identifier of the PPM file type (`P6` for binary RGB, `P5` for grayscale).
+  - `channels`: Number of color channels (3 for RGB, 1 for grayscale).
+  - `width`: Width of the image in pixels.
+  - `height`: Height of the image in pixels.
+  - `max_color`: Maximum color value (usually 255 for 8-bit images).
+  - `binary_start`: Position in the file where binary pixel data begins.
 
 - **Results**:
 
@@ -67,6 +130,22 @@ With the widespread use of mobile devices, the cost of image storage and transmi
   | <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250108180928715.png" alt="image-20250108180918838"/> | <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250108180918838.png" alt="image-20250108180918838" style="zoom:60%;" /> |
 
   This confirms that the original `.ppm` image is stored in Band Interleaved by Pixel (BIP) format, where all RGB values of each pixel are stored sequentially, e.g., `Pixel1 [R, G, B] → Pixel2 [R, G, B] → Pixel3 [R, G, B]`.
+
+#### 2. Extract raw data
+
+- **Function**: `extract_raw_data`
+
+  Extracts the binary pixel data from a PPM file and saves it as a raw binary file.
+
+- **Parameters**:
+  - `file_path`: Path to the PPM file.
+  - `binary_start`: Position in the file where binary pixel data begins (returned by `read_ppm`).
+  - `output_path`: Path to save the extracted raw binary data.
+- **Steps**:
+  1. Open the PPM file in binary read mode.
+  2. Move the file pointer to the position of `binary_start` to skip the header.
+  3. Read the binary pixel data.
+  4. Save the pixel data to the specified output path as a raw file.
 
 ------
 
@@ -230,15 +309,3 @@ To execute the compression, modify the image path in the main function to call t
 
 Modify the parameter in the main function to point to the path of the compressed binary file when calling `restore_image_from_npz`. This will decompress the image and restore it to its original form.
 
-The comparison between the original and compressed images is as follows:
-
-| Original Image                                               | Compressed File                                              |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `nightshot_iso_1600.ppm` (21610 KB)                          | `compressed_data.npz` (9457 KB)                              |
-| <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250110181253164.png" alt="image-20250110181253164"/> | ![image-20250110181316824](D:\0. Data Transmittion\Image Compression\assets\image-20250110181316824.png) |
-
-Compression ratio:
-$$
-\text{Compression Ratio} = \frac{9457}{21610} \times 100\% \approx 43.75\%
-$$
-The final compression ratio is approximately **43.75%**.
