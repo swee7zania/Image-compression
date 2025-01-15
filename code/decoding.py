@@ -5,7 +5,7 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.convert_to_ycbcr import ycbcr_to_rgb
-from tools.PSNR_calculation import print_psnr
+from tools.PSNR_calculation import print_psnr, print_ssim
 
 
 def rle_decompress(compressed_data, shape):
@@ -45,8 +45,9 @@ if __name__ == '__main__':
     restore_image('data/compressed_data.npz')
 
     # Calculating PSNR
-    input_file = '../dataset/rgb8bit/leaves_iso_200.ppm'
+    input_file = '../dataset/rgb8bit/flower_foveon.ppm'
     original_img_path = 'data/image.raw'
     compressed_img_path = 'data/restored_image.png'
 
     print_psnr(input_file, original_img_path, compressed_img_path)
+    print_ssim(input_file, original_img_path, compressed_img_path)

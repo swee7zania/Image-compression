@@ -36,7 +36,7 @@ def ycbcr_to_rgb(Y, Cb, Cr):
 
 # TEST
 if __name__ == '__main__':
-    input_file = '../../dataset/rgb8bit/nightshot_iso_1600.ppm'
+    input_file = '../../dataset/rgb8bit/cathedral.ppm'
     raw_file = '../data/image.raw'
 
     # Read PPM and extract raw data

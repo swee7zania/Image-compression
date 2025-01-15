@@ -9,9 +9,17 @@ def fmm_quantization(channel, modulus):
     return (np.round(channel / modulus) * modulus).astype(np.uint8)
 
 
+def calculate_entropy(channel):
+    flattened = channel.flatten()  # 将二维通道展平成一维
+    unique_vals, counts = np.unique(flattened, return_counts=True)
+    probabilities = counts / flattened.size
+    entropy = -np.sum(probabilities * np.log2(probabilities))
+    print(f"Shannon entropy of the channel: {entropy:.2f} bits")
+
+
 # TEST
 if __name__ == '__main__':
-    input_file = '../../dataset/rgb8bit/nightshot_iso_1600.ppm'
+    input_file = '../../dataset/rgb8bit/cathedral.ppm'
     raw_file = '../data/image.raw'
 
     # Read PPM and extract raw data
@@ -21,9 +29,14 @@ if __name__ == '__main__':
     Y, Cb, Cr = rgb_to_ycbcr(raw_file, width, height)
 
     # Perform FMM quantification on each channel
-    Y_quant = fmm_quantization(Y, 3)  # 亮度通道
+    Y_quant = fmm_quantization(Y, 1)  # 亮度通道
     Cb_quant = fmm_quantization(Cb, 10)  # 色度通道 Cb
     Cr_quant = fmm_quantization(Cr, 10)  # 色度通道 Cr
+
+    # Calculate the quantized entropy
+    Y_entropy = calculate_entropy(Y_quant)
+    Cb_entropy = calculate_entropy(Cb_quant)
+    Cr_entropy = calculate_entropy(Cr_quant)
 
     # Save quantification results
     Image.fromarray(Y_quant).save('../data/fmm/Y_channel.png')

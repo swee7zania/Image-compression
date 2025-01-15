@@ -1,6 +1,10 @@
 # **Image Transmission for Intelligent Mobile Devices**
 
-With the popularity of smart mobile devices (such as smartphones, drones, and dashcams), these devices are often used to capture high-resolution images or video content. However, the storage capacity and network bandwidth of the devices are limited, especially in real-time transmission scenarios. To reduce bandwidth requirements while maintaining perceived image quality, I propose an image compression algorithm based on human visual perception characteristics. Drawing inspiration from the paper *Five Modulus Method for Image Compression (https://arxiv.org/abs/1211.4591)*, this method rounds data values and multiplies them by their rounded values, grouping adjacent values within a specified range. This makes the data more suitable for Run-Length Encoding (RLE).
+With the proliferation of smart mobile devices such as smartphones, drones, and dashcams, these devices frequently capture high-resolution images or videos. However, the constraints of storage capacity and network bandwidth—especially in real-time transmission scenarios—necessitate efficient compression methods. This project introduces an **image compression algorithm** inspired by **perceptual coding**, which leverages the characteristics of human visual perception to achieve **visually lossless** yet highly efficient compression.
+
+Perceptual coding exploits the non-uniform sensitivity of the human visual system to different spatial frequencies, allowing for the selective preservation of critical details while discarding less perceptible information. To implement this, I utilize **FMM quantization** to achieve controllable lossy compression by assigning different modulus, effectively reducing data size without noticeable quality degradation. This approach ensures that visually significant details, such as edges and high-frequency components, are preserved, while low-sensitivity regions are compressed more aggressively.
+
+In addition, **entropy coding**—specifically **Run-Length Encoding (RLE)**—is employed to further enhance compression efficiency. After FMM quantization, the redundancy in low-frequency regions of the chrominance channels creates long sequences of repeated values, making RLE particularly effective. The combination of FMM and RLE not only reduces data size but also simplifies the encoding and decoding processes, making the algorithm suitable for real-time applications in resource-constrained devices like drones.
 
 ### **1. Scenario Description**
 
@@ -15,13 +19,13 @@ Assume a practical application scenario: a wildlife protection monitoring system
 Given these constraints, efficient image compression is essential to reduce data size while ensuring visual quality and meeting transmission and storage requirements. Specifically, the compression algorithm must achieve:
 
 - A compressed bit rate of **2 Mbps** or lower.
-- A compression ratio of at least **60%**, e.g., reducing the size of a 3 MB image to 1200 KB or less.
+- A compression ratio of at least **50%**, e.g., reducing the size of a 3 MB image to 1200 KB or less.
 
 ### 2. Core Concept
 
 #### 2.1 Human Visual Perception
 
-Sensitivity of human eyes varies across different image regions:
+Perceptual coding aims to compress image data while ensuring that the reconstructed images appear visually identical to the original ones. By taking advantage of the human eye's varying sensitivity to different frequencies, compression algorithms can discard more information in less sensitive regions while retaining higher fidelity in critical areas. Sensitivity of human eyes varies across different image regions:
 - Highly sensitive to luminance (`Y` channel) changes, especially edges and high-frequency details.
 - Less sensitive to chrominance (`Cb` and `Cr` channels) changes, particularly in low-frequency regions.
 
@@ -51,17 +55,20 @@ RLE is a straightforward algorithm that is computationally efficient, making it 
 
 #### 3.1 Encoding Pipeline
 
-1. Reading and Preprocessing:
-   - Read `.ppm` image data, including luminance channel `Y` and chrominance channels `Cb` and `Cr`.
+1. Reading and extraction:
+   - Read `.ppm` image data, extract binary data from the `.ppm` file, remove the header, and convert to `.raw` format for entropy calculation.
+   - Calculate the entropy of the original `.raw` image as a measure of data complexity.
+2. Preprocessing:
+   - Read `.raw` image data, including luminance channel `Y` and chrominance channels `Cb` and `Cr`.
    - Convert to `YCbCr` color space, separating luminance and chrominance channels.
-2. FMM Quantization:
+3. FMM Quantization:
    - Luminance channel `Y`: Modulus temporarily set to 4 to retain more visually important details.
    - Chrominance channels `Cb` and `Cr`: Modulus temporarily set to 7 to further reduce storage and transmission data.
    - FMM quantization parameters can be dynamically adjusted based on image complexity.
-3. Entropy Coding:
+4. Entropy Coding:
    - Compress quantized values further using entropy coding.
    - Use **RLE (Run-Length Encoding)** to effectively compress repetitive data segments.
-4. Packaging Compressed File:
+5. Packaging Compressed File:
    - Save RLE-encoded data as a binary file, storing relevant data.
 
 #### 3.2 Decoding Pipeline
@@ -76,24 +83,40 @@ RLE is a straightforward algorithm that is computationally efficient, making it 
 
 ### 4. Compression Results
 
-#### 4.1 Before and After
+#### 4.1 Extract raw data
+
+In the case of `cathedral.ppm`, I removed the header data and kept only the original binary image data.
+
+<img src="D:\0. Data Transmittion\Image Compression\assets\image-20250115151448756.png" alt="image-20250115151448756" style="zoom:33%;" />
+
+#### 4.2 Quantization and Entropy
+
+In the case of `nightshot_iso_1600.ppm`, I calculated the original entropy and the entropy after FMM quantization.
+
+| Raw Entropy | Entropy After FMM Quantization                               |
+| ----------- | ------------------------------------------------------------ |
+| 15.46 bits  | `Y` channel: 4.94 bits; `Cb` channel:2.33 bits; `Cr` channel:1.66 bits |
+
+The `Y` channel modulus is 3, and the `Cb` and `Cr` channel modulus is 10. It can be seen that the entropy of the original image is higher and the compression space is smaller. After FMM quantization, the entropy value is significantly smaller, and there is more room for compression. 
+
+This shows that FMM quantization plays a very good role. The higher the modulus, the lower the entropy value.
+
+#### 4.3 Before and After
 
 The comparison between the original and compressed images is as follows:
 
-| Original Image                                               | Decompress Image                                             | Compression Ratio | Calculation PSNR |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------- | ---------------- |
-| `nightshot_iso_1600.raw` (21609KB)                           | `compressed_data.npz` (8651 KB)                              | ≈ 60%             | ≈ 30.02 dB       |
-| <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250110181253164.png" alt="image-20250110181253164"/> | ![image-20250110181316824](D:\0. Data Transmittion\Image Compression\assets\image-20250110181316824.png) |                   |                  |
-| `flower_foveon.raw` (10047KB)                                | `compressed_data.npz` (1481 KB)                              | ≈ 85%             | ≈ 31.16 dB       |
-| `cathedral.raw`（17625KB)                                    | `compressed_data.npz` (5978 KB)                              | ≈ 66%             | ≈ 30.81 dB       |
-| `leaves_iso_200.raw`（17625KB)                               | `compressed_data.npz` (6647 KB)                              | ≈ 62%             | ≈ 29.37 dB       |
+| Original Image                                               | Decompress Image                                             | FMM modulus       | Compression Ratio | PSNR     | SSIM   |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------- | ----------------- | -------- | ------ |
+| `nightshot_iso_1600.raw` (21609KB)                           | `compressed_data.npz` (8651 KB)                              | Y:3;  Cb:9; Cr:9  | ≈ 60%             | ≈30.02dB | ≈0.951 |
+| <img src="D:\0. Data Transmittion\Image Compression\assets\image-20250110181253164.png" alt="image-20250110181253164"/> | ![image-20250110181316824](D:\0. Data Transmittion\Image Compression\assets\image-20250110181316824.png) |                   |                   |          |        |
+| `flower_foveon.raw` (10047KB)                                | `compressed_data.npz` (1481 KB)                              | Y:2; Cb:10; Cr:10 | ≈ 85%             | ≈31.16dB | ≈0.985 |
+| `cathedral.raw`（17625KB)                                    | `compressed_data.npz` (5978 KB)                              | Y:1; Cb:10; Cr:10 | ≈ 66%             | ≈30.81dB | ≈0.978 |
 
-#### 4.2 Performance Evaluation
+From the compression results, we can see that we can flexibly adjust the modulus according to the characteristics of the image. The **compression rate** is as high as **over 60%**, and the compressed image is perceived the same by the human eye.
 
-The experimental results show that the compression rate between **60% - 85%** can effectively reduce the amount of data stored and transmitted for images. For most images, the compression rate exceeds 60%, achieving the expected goal.
+A high **Peak Signal-to-Noise Ratio (PSNR)** value of **>30 dB** indicates good image quality, suitable for storage or transmission, and has little effect on the human eye. It indicate that the adopted FMM+RLE method has achieved a good balance between compression efficiency and image quality.
 
-- **Stability of PSNR**: The PSNR values of different images range from 29.37 dB to 31.16 dB, indicating that the compressed images can well preserve the original information in terms of visual quality. Among them, `flower_foveon.raw` has the highest PSNR (31.16 dB), while `leaves_iso_200.raw` has a slightly lower PSNR (29.37 dB). Nevertheless, these values are close to or exceed 30 dB, meeting the quality requirements of practical applications.
-- **Trade-off between compression rate and image quality**: From the experimental data, a higher compression rate (such as 85% of `flower_foveon.raw`) can still maintain a high PSNR, indicating that the adopted FMM+RLE method has achieved a good balance between compression efficiency and image quality.
+The **Structural Similarity Index Measure (SSIM)** ranges from [0, 1]. The closer the value is to 1, the more similar the two images are. The SSIM range of these compressed images is basically **0.95 ~ 0.99**, which means that the images are almost lossless and the quality after compression is very close to the original image.
 
 ------
 
