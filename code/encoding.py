@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import time
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.read_ppm import read_ppm, extract_raw_data
@@ -24,6 +25,9 @@ def rle_compress(channel):
 
 
 def compress_data(input_file, raw_file):
+    # Calculation program time
+    start_time = time.time()
+
     # Read PPM and extract raw data
     magic_number, channels, width, height, max_color, binary_start = read_ppm(input_file)
     extract_raw_data(input_file, binary_start, raw_file)
@@ -46,9 +50,27 @@ def compress_data(input_file, raw_file):
     save_compressed_data_npz(Y_compressed, Cb_compressed, Cr_compressed, Y.shape, 'data/compressed_data.npz')
     print("Compressed data is saved: data/compressed_data.npz")
 
+    end_time = time.time()
+    print(f"\nTotal Compression Time: {end_time - start_time:.2f} seconds")
+
 
 def save_compressed_data_npz(Y_compressed, Cb_compressed, Cr_compressed, Y_shape, filename):
     np.savez_compressed(filename, Y=Y_compressed, Cb=Cb_compressed, Cr=Cr_compressed, shape=Y_shape)
+
+
+def calculate_limit(raw_file):
+    original_size = os.path.getsize(raw_file)
+    compressed_size = os.path.getsize('data/compressed_data.npz')
+
+    compression_ratio = (compressed_size / original_size) * 100
+
+    bandwidth = 10 * 10 ** 6  # 10 Mbps in bits per second
+    transmission_time = (compressed_size * 8) / bandwidth
+
+    print(f"\nOriginal File Size: {original_size / 1024:.2f} KB")
+    print(f"Compressed File Size: {compressed_size / 1024:.2f} KB")
+    print(f"Compression Ratio: {100 - compression_ratio:.2f}%")
+    print(f"Estimated Transmission Time: {transmission_time:.2f} seconds")
 
 
 if __name__ == '__main__':
@@ -57,3 +79,4 @@ if __name__ == '__main__':
     raw_file = 'data/image.raw'
 
     compress_data(input_file, raw_file)
+    calculate_limit(raw_file)
