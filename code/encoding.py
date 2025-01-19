@@ -5,7 +5,7 @@ import time
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tools'))
 from tools.read_ppm import read_ppm, extract_raw_data
-from tools.fmm_quantization import fmm_quantization
+from tools.fmqm_quantization import fmqm_quantization
 from tools.convert_to_ycbcr import rgb_to_ycbcr
 from tools.entropy_calculation import calculate_entropy
 
@@ -37,9 +37,9 @@ def compress_data(input_file, raw_file):
     Y, Cb, Cr = rgb_to_ycbcr(raw_file, width, height)
 
     # Perform FMM quantification on each channel
-    Y_quant = fmm_quantization(Y, 4)  # 亮度通道 Y
-    Cb_quant = fmm_quantization(Cb, 8)  # 色度通道 Cb
-    Cr_quant = fmm_quantization(Cr, 8)  # 色度通道 Cr
+    Y_quant = fmqm_quantization(Y, 4)  # 亮度通道 Y
+    Cb_quant = fmqm_quantization(Cb, 8)  # 色度通道 Cb
+    Cr_quant = fmqm_quantization(Cr, 8)  # 色度通道 Cr
 
     # RLE compression for each channel
     Y_compressed = rle_compress(Y_quant)
